@@ -1,0 +1,108 @@
+classDiagram
+
+    %% ─────────────────────────────────────────────
+    %%  ENTRY POINT
+    %% ─────────────────────────────────────────────
+
+    class Main {
+        +main(args : String[]) void$
+        -verifySubscriptions(subs : List~Subscription~, fieldFreq : Map, eqFreq : Map) void$
+    }
+
+    %% ─────────────────────────────────────────────
+    %%  CONFIGURATION
+    %% ─────────────────────────────────────────────
+
+    class GeneratorConfig {
+        +totalPublications  : int
+        +totalSubscriptions : int
+        +fieldFrequency     : Map~String, Double~
+        +equalityFrequency  : Map~String, Double~
+        +numThreads         : int
+        +publicationsFile   : String
+        +subscriptionsFile  : String
+        +GeneratorConfig(totalPublications : int, totalSubscriptions : int, fieldFrequency : Map, equalityFrequency : Map, numThreads : int, publicationsFile : String, subscriptionsFile : String)
+    }
+
+    %% ─────────────────────────────────────────────
+    %%  DOMAIN MODELS
+    %% ─────────────────────────────────────────────
+
+    class Publication {
+        -company   : String
+        -value     : double
+        -drop      : double
+        -variation : double
+        -date      : LocalDate
+        -DATE_FMT  : DateTimeFormatter$
+        +Publication(company : String, value : double, drop : double, variation : double, date : LocalDate)
+        +toString() String
+    }
+
+    class Subscription {
+        -fields : LinkedHashMap~String, String~
+        +addField(fieldName : String, operator : String, value : String) void
+        +toString() String
+    }
+
+    %% ─────────────────────────────────────────────
+    %%  CORE GENERATOR
+    %% ─────────────────────────────────────────────
+
+    class MessageGenerator {
+        -COMPANIES      : String[]$
+        -NUM_OPS_NO_EQ  : String[]$
+        -NUM_OPS        : String[]$
+        -EQ_OPS         : String[]$
+        -DATE_START     : LocalDate$
+        -DATE_RANGE_DAYS: int$
+        -VALUE_MIN      : double$
+        -VALUE_MAX      : double$
+        -DROP_MIN       : double$
+        -DROP_MAX       : double$
+        -VARIATION_MIN  : double$
+        -VARIATION_MAX  : double$
+        +FIELD_NAMES    : String[]$
+        -cfg            : GeneratorConfig
+        +MessageGenerator(cfg : GeneratorConfig)
+        +generatePublications() List~Publication~
+        +generateSubscriptions() List~Subscription~
+        -randomPublication(rng : Random) Publication
+        -buildSubscription(idx : int, fieldSlots : Map, eqSlotSets : Map, rng : Random) Subscription
+        -buildSubscriptionFromSets(idx : int, fieldSlotSets : Map, eqSlotSets : Map, rng : Random) Subscription
+        -addFieldToSubscription(sub : Subscription, field : String, forceEq : boolean, rng : Random) void
+        -buildFieldSlots(N : int) Map~String, int[]~
+        -buildEqSlotSets(fieldSlots : Map) Map~String, Set~
+        -randomDouble(rng : Random, min : double, max : double) double$
+        -pickOp(ops : String[], rng : Random) String$
+        -shuffleArray(arr : int[], rng : Random) void$
+    }
+
+    %% ─────────────────────────────────────────────
+    %%  UTILITIES
+    %% ─────────────────────────────────────────────
+
+    class BenchmarkRunner {
+        +run(totalMessages : int, fieldFreq : Map, eqFreq : Map, threadCounts : int[], outputDir : String) void$
+    }
+
+    class FileWriter {
+        +write(path : String, items : List) void$
+    }
+
+    %% ─────────────────────────────────────────────
+    %%  RELATIONSHIPS
+    %% ─────────────────────────────────────────────
+
+    Main             ..>  GeneratorConfig   : creates
+    Main             ..>  MessageGenerator  : creates & uses
+    Main             ..>  FileWriter        : uses
+    Main             ..>  BenchmarkRunner   : calls
+
+    BenchmarkRunner  ..>  GeneratorConfig   : creates
+    BenchmarkRunner  ..>  MessageGenerator  : creates & uses
+    BenchmarkRunner  ..>  FileWriter        : uses
+
+    MessageGenerator  -->  GeneratorConfig  : cfg (uses)
+    MessageGenerator  ..>  Publication      : creates
+    MessageGenerator  ..>  Subscription     : creates
